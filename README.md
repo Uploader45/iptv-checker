@@ -33,7 +33,7 @@ Existen dos formas de colaborar:
 Sí, siempre que cumplas la [LICENCIA MIT](https://github.com/adrianpaniagualeon/iptv-checker/blob/main/LICENSE).
 
 Si vas a usarlo en Heroku, te lo ponemos un poco más facil. Solo tienes que hacer click en el siguiente botón
-[![Deploy](https://www.herokucdn.com/deploy/button.svg)]
+[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://dashboard.heroku.com/new?template=https%3A%2F%2Fgithub.com%2Fadrianpaniagualeon%2Fiptv-checker)
 
 ## ¿Qué variables de entorno necesito?
 |Campo|Información|
@@ -46,4 +46,3 @@ Si vas a usarlo en Heroku, te lo ponemos un poco más facil. Solo tienes que hac
 Si, puedes usar el bot sin WebHook modificando el archivo `bot.py`.
 
 
-(https://dashboard.heroku.com/new?template=https%3A%2F%2Fgithub.com%2Fadrianpaniagualeon%2Fiptv-checker)
