@@ -1,89 +1,299 @@
-import telebot
-import requests,json
-from telebot import types
-from flask import Flask, request
+# @adityaraj7612
+
 import os
-from datetime import datetime
-import traceback
+from pyrogram import Client, filters
+from pyrogram.types import *
+from utils import *
+import os.path
+from urllib.request import urlopen, Request
+import pytz
+import time
 
 
-TOKEN =  os.environ['TOKEN']
-WEBHOOK = os.environ['WEBHOOK']
+
+Bot = Client(
+    "Conan76-Simple-IPTV-m3u-to-Video-Bot",
+    bot_token = "5561532834:AAEwk_vC8KmmcRKyPTe2XjZXC_1GG6DCaXk",
+    api_id = 15668875,
+    api_hash = "9126d3e935a1553bedf9bd822f3b4ad9"
+)
 
 
-bot = telebot.TeleBot(TOKEN)
-server = Flask(__name__)
+START_TEXT = """<b><i>Hello</i></b> {}
+<b><i>It's a Recording Bot Of Pokesensei.</i></b>
 
-@bot.message_handler(commands={"start"})
-def start(message):
-	cid = message.chat.id
-	bot.send_message(cid,"Hola!\nEste bot te permitirá comprobar el estado de tus listas mediante la API de Xtream Codes.\nPara comprobar tu lista tan solo tienes que enviarme el enlace y yo te mostraré toda la información\n\nBot desarrollado por @APLEONI\nhttps://github.com/adrianpaniagualeon/iptv-checker")
+> `{}`
 
-@bot.message_handler(func=lambda message: True)
-def echo_message(message):
-	try:
-		numero_streams = 0
-		cid = message.chat.id
-		url = message.text
-		url =  url.replace('get.php','panel_api.php')
-		respuesta = requests.get(url)
-		open('respuesta.json', 'wb').write(respuesta.content)
-		f = open('respuesta.json')
-		json_file = json.load(f)
-		json_str = json.dumps(json_file)
-		resp = json.loads(json_str)
-		username = resp['user_info']['username']
-		password = resp['user_info']['password']
-		status  = resp['user_info']['status']
-
-		expire_dates = resp['user_info']['exp_date']
-		if (expire_dates != None):
-			expire_date = datetime.fromtimestamp(int(expire_dates))
-
-			expirate =True
-
-			expire_year = expire_date.strftime("%Y")
-			expire_month = expire_date.strftime("%m")
-			expire_day = expire_date.strftime("%d")
-		else:
-			expirate = False
-
-		creates_dates = resp['user_info']['created_at']
-		create_date = datetime.fromtimestamp(int(creates_dates))
-		create_year = create_date.strftime("%Y")
-		create_month = create_date.strftime("%m")
-		create_day = create_date.strftime("%d")
-
-		a_connections = resp['user_info']['active_cons']
-		m_conections = resp['user_info']['max_connections']
-
-		for stream in resp['available_channels']:
-			numero_streams  = numero_streams+1
-
-		url_server = resp['server_info']['url']
-		port_server = resp['server_info']['port']
-		client_area = "http://"+url_server+":"+port_server+"/client_area/index.php?username="+username+"&password="+password+"&submit"
-
-		if (expirate == True):
-			mensaje ="Esta es la información de tu lista ⬇️\n\n🟢 Estado: "+status+"\n👤 Usuario: "+username+"\n🔑 Contraseña: "+password+"\n📅 Fecha de Caducidad: "+str(expire_day)+"-"+str(expire_month)+"-"+str(expire_year)+"\n📅 Fecha de Creación: "+str(create_day)+"-"+str(create_month)+"-"+str(create_year)+"\n👥 Conexiones activas: "+a_connections+"\n👥 Conexiones máximas: "+m_conections+"\n🔢 Número de Canales: "+str(numero_streams)+"\n🖥️ Servidor: "+url_server+":"+port_server+"\n🔒 Zona de Cliente: "+client_area+"\n\n🤖: @iptv_checker_bot\n Develop by Adrian Paniagua"
-		else:
-			mensaje ="Esta es la información de tu lista ⬇️\n\n🟢 Estado: "+status+"\n👤 Usuario: "+username+"\n🔑 Contraseña: "+password+"\n📅 Fecha de Caducidad: Nunca\n📅 Fecha de Creación: "+str(create_day)+"-"+str(create_month)+"-"+str(create_year)+"\n👥 Conexiones activas: "+a_connections+"\n👥 Conexiones máximas: "+m_conections+"\n🔢 Número de Canales: "+str(numero_streams)+"\n🖥️ Servidor: "+url_server+":"+port_server+"\n🔒 Zona de Cliente: "+client_area+"\n\n🤖: @iptv_checker_bot\n Develop by Adrian Paniagua "
-	except:
-		mensaje= "No he podido obtener la información de este enlace. Prueba con otro"
-		
-	bot.reply_to(message, mensaje)
-
-@server.route('/' + TOKEN, methods=['POST'])
-def getMessage():
-	bot.process_new_updates([telebot.types.Update.de_json(request.stream.read().decode("utf-8"))])
-	return "!", 200
+<b>Made by @PokeSensei</b>"""
 
 
-@server.route("/")
-def webhook():
-	bot.remove_webhook()
-	bot.set_webhook(url=WEBHOOK + TOKEN)
-	return "!", 200
 
-if __name__ == "__main__":
-	server.run(host="0.0.0.0", port=int(os.environ.get('PORT', 5000)))
+HELP_TEXT = """<b><i>Hello</i></b> {}
+<b><i>Here are The Commands which can be used in the BOT!</i></b>
+
+> <b>Get This Help Module </b> <code>/help</code>
+
+> <b>Get the List of Channels </b> <code>/channels</code>
+
+> <b>Records Multi Audio TV Rips from streamLink </b> <code>/multirec CN 00:00:10 | Ben 10</code>
+
+<b><i>Click on the Command to COPY</i></b>
+
+<b>Made by @PokeSensei</b>"""
+
+
+
+
+
+CHANNELS_TEXT = """<b>Here are the List of Channels : </b>
+
+<code>{}</code>
+
+<b>Usage : </b> <code>/multirec channelTitle duration | showTitle</code> 
+
+<b>Example : </b> <code>/multirec Star Maa 00:00:10 | Movie</code> 
+"""
+
+
+SITE_BUTTON = [
+    InlineKeyboardButton(
+        text='WEBSITE',
+        url='t.me/SushanthMachineni'
+    )
+]
+
+
+@Bot.on_message(filters.private & filters.command(["channels"]))
+def channel_list(bot, update):
+
+    if update.from_user.id in config.AUTH_USERS:
+
+        url = "https://vigorous-kirch-074e44.netlify.app/dark_night.json"
+        response = urlopen(url)
+        data_json = json.loads(response.read())
+
+        channelsList = ""
+        for i in data_json:
+          channelsList += f"{i}\n"
+
+
+        update.reply_text(
+        text=CHANNELS_TEXT.format(channelsList),
+        reply_markup=InlineKeyboardMarkup([SITE_BUTTON]),
+        disable_web_page_preview=True,
+        quote=True
+    )
+
+
+    else:
+        update.reply_text(
+        text="`You are not Allowed to access this Command`",
+        reply_markup=InlineKeyboardMarkup([SITE_BUTTON]),
+        disable_web_page_preview=True,
+        quote=True
+    )
+
+
+
+@Bot.on_message(filters.private & filters.command(["start"]))
+def start(bot, update):
+
+
+    if update.from_user.id in config.AUTH_USERS:
+
+        update.reply_text(
+        text=START_TEXT.format(update.from_user.mention , "You are a Authorised User"),
+        reply_markup=InlineKeyboardMarkup([SITE_BUTTON]),
+        disable_web_page_preview=True,
+        quote=True
+        )
+
+        print('--------')
+        print(f'[USER] {update.from_user.first_name} - {update.from_user.id}\n[CMD] start')
+        print('--------')
+    
+    elif update.from_user.id in config.ADMIN_USERS:
+
+        update.reply_text(
+        text=START_TEXT.format(update.from_user.mention , "You are in the list of ADMIN User"),
+        reply_markup=InlineKeyboardMarkup([SITE_BUTTON]),
+        disable_web_page_preview=True,
+        quote=True
+        )
+        print('--------')
+        print(f'[USER] {update.from_user.first_name} - {update.from_user.id}\n[CMD] start')
+        print('--------')
+
+
+    elif update.from_user.id not in config.ADMIN_USERS:
+
+        update.reply_text(
+        text=START_TEXT.format(update.from_user.mention , "You are not Allowed to access this BOT"),
+        reply_markup=InlineKeyboardMarkup([SITE_BUTTON]),
+        disable_web_page_preview=True,
+        quote=True
+        )
+        print('--------')
+        print(f'[USER] {update.from_user.first_name} - {update.from_user.id}\n[CMD] start')
+        print('--------')
+
+
+    
+
+
+    
+
+
+
+
+@Bot.on_message(filters.private & filters.command(["multirec"]))
+def recording_multi_audio(bot, update):
+
+
+    if update.from_user.id in config.AUTH_USERS:
+
+        if len(update.command) > 1:
+
+            url = "https://gist.githubusercontent.com/Uploader45/c50a746b3303cec0f3355f2e5c39c2b0/raw/TV"
+            response = urlopen(url) 
+            data_json = json.loads(response.read())
+
+
+            if update.command[1] in data_json:
+
+                channel = update.command[1]
+                channel_json = data_json[channel][0]['title']
+                recordingDuration = update.command[2]
+
+                
+                if len(update.command) > 2:
+
+                    if '|' in update.command:
+                        join = concatenate_list_data(update.command)
+                        title = join.split('| ')
+                        title = title[1]
+                        # multirecNickJunior00:00:10|MashaTest
+                    elif recordingDuration.split(':')[2] <= 50:
+                        title = "Test"
+                    else:
+                        title = "No Title"
+
+
+
+                    msg = update.reply_text(
+                    text = f"<b><i>Recording in Progress...</b></i>",
+                    disable_web_page_preview=True,
+                    quote=True
+                    )
+                    print('--------')
+                    print(f'[RECORDING] {channel_json} - {recordingDuration}\n[USER] {update.from_user.first_name} - {update.from_user.id}')
+                    print('--------')
+
+                    
+
+                    audioList = audioListTitle(data_json[channel][0]['audio'])
+
+                    try:
+                        newfile = multi_rip(bot, update , streamUrl = data_json[channel][0]['link'] , channel = data_json[channel][0]['title'] , recordingDuration = recordingDuration , language = audioList , ripType = data_json[channel][0]['ripType'] , ripQuality = data_json[channel][0]['quality'] , fileTitle = title)
+                        
+                        if os.path.exists(newfile) == True:
+                            msg.edit(text = f'<b><i>{channel_json} Recorded Successfully</i></b>' , disable_web_page_preview=True)
+
+                            print('--------')
+                            print(f'[RECORDING DONE] {channel_json} - {recordingDuration}\n[USER] {update.from_user.first_name} - {update.from_user.id}')
+                            print('--------')
+
+
+
+
+                            print('--------')
+                            print(f'[UPLOAD] {newfile}\n[USER] {update.from_user.first_name} - {update.from_user.id}')
+                            print('--------')
+                            
+                            
+
+                            duration = get_duration(newfile)
+                            width, height = get_width_height(newfile)
+
+                            bot.send_video(video=newfile, chat_id = update.from_user.id , caption= f"<code>{newfile}</code>")
+
+                                
+
+                            
+                            os.remove(newfile)
+
+                            print('--------')
+                            print(f'[REMOVE] {newfile}\n[USER] {update.from_user.first_name} - {update.from_user.id}')
+                            print('--------')
+                                
+
+                                
+                                
+
+
+
+                        else:
+                            msg.edit(text = f'<b><i>Recording Failed</b></i>' , disable_web_page_preview=True)
+
+                    except Exception as e:
+                        msg.edit(text = f'<code>{e}</code>' , disable_web_page_preview=True)
+
+
+
+
+                    
+
+
+                    
+
+                else:
+
+                    update.reply_text(
+                    text = f"<b><i>No Duration Supplied for {update.command[1]}</b></i>",
+                    disable_web_page_preview=True,
+                    quote=True
+                    )
+
+
+
+                
+            
+            else:
+                update.reply_text(
+                text = f"<b><i>Requested Channel not Found in Database!</i></b>",
+                disable_web_page_preview=True,
+                quote=True
+                )
+
+
+            
+
+
+            
+
+        else:
+            update.reply_text(
+            text="<b><i>No Command from User...</i></b>",
+            disable_web_page_preview=True,
+            quote=True
+            )
+
+        
+
+    else:
+        update.reply_text(
+        text="`You are not Allowed to access this Command`",
+        reply_markup=InlineKeyboardMarkup([SITE_BUTTON]),
+        disable_web_page_preview=True,
+        quote=True
+    )
+
+
+
+    
+
+
+
+
+
+Bot.run()
